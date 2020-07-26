@@ -1,5 +1,5 @@
 # Vue 3 with TypeScript
-A demo project outling how to use Vue 3 with TypeScript to build powerful apps.
+A demo project outlining how to use Vue 3 with TypeScript to build powerful apps.
 
 ## What is used?
 - Vue 3
