@@ -4,6 +4,7 @@ const { DefinePlugin } = require('webpack')
 
 const { VueLoaderPlugin }  = require('vue-loader')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+const TsconfigPathsPlugin  = require('tsconfig-paths-webpack-plugin')
 
 const envDefaults = {
   prod: false,
@@ -25,6 +26,10 @@ module.exports = (env = envDefaults) => ({
     alias: {
       'vue': '@vue/runtime-dom',
     },
+
+    plugins: [
+      new TsconfigPathsPlugin(),
+    ],
   },
 
   module: {
