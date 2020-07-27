@@ -4,18 +4,19 @@ const { DefinePlugin } = require('webpack')
 
 const { VueLoaderPlugin }  = require('vue-loader')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+const TsconfigPathsPlugin  = require('tsconfig-paths-webpack-plugin')
 
-const envDefaults = {
-  prod: false,
-}
-
-module.exports = (env = envDefaults) => ({
-  mode    : env.prod === true ? 'production' : 'development',
-  devtool : env.prod === true ? 'source-map' : 'cheap-module-eval-source-map',
-  entry   : path.resolve(__dirname, './src/main.ts'),
+module.exports = (env) => ({
+  context : path.resolve(process.cwd(), 'src'),
+  devtool : env.production === true ? 'source-map' : 'eval-cheap-source-map',
+  mode    : env.production === true ? 'production' : 'development',
+  
+  entry: {
+    'main': './main.ts',
+  },
 
   output: {
-    path       : path.resolve(__dirname, './dist'),
+    path       : path.resolve(process.cwd(), 'dist'),
     publicPath : '/dist/',
   },
 
@@ -25,6 +26,10 @@ module.exports = (env = envDefaults) => ({
     alias: {
       'vue': '@vue/runtime-dom',
     },
+
+    plugins: [
+      new TsconfigPathsPlugin(),
+    ],
   },
 
   module: {
@@ -66,7 +71,7 @@ module.exports = (env = envDefaults) => ({
             loader: MiniCssExtractPlugin.loader,
             
             options: {
-              hmr : env.prod === false,
+              hmr : env.production === false,
             },
           },
           'css-loader',
@@ -84,16 +89,16 @@ module.exports = (env = envDefaults) => ({
 
     new DefinePlugin({
       'process.env': {
-        NODE_ENV: JSON.stringify(env.prod === true ? 'production' : 'development'),
+        NODE_ENV: JSON.stringify(env.production === true ? 'production' : 'development'),
       },
 
       __VUE_OPTIONS_API__   : JSON.stringify(true),
-      __VUE_PROD_DEVTOOLS__ : JSON.stringify(env.prod !== false),
+      __VUE_PROD_DEVTOOLS__ : JSON.stringify(env.production === false),
     }),
   ],
 
   devServer: {
-    contentBase : __dirname,
+    contentBase : path.resolve(process.cwd()),
     hot         : true,
     inline      : true,
     overlay     : true,
