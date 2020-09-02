@@ -2,106 +2,145 @@ const path = require('path')
 
 const { DefinePlugin } = require('webpack')
 
-const { VueLoaderPlugin }  = require('vue-loader')
+const { CleanWebpackPlugin } = require('clean-webpack-plugin')
+const HtmlWebpackPlugin = require('html-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const TsconfigPathsPlugin  = require('tsconfig-paths-webpack-plugin')
+const { VueLoaderPlugin }  = require('vue-loader')
 
-module.exports = (env) => ({
-  context : path.resolve(process.cwd(), 'src'),
-  devtool : env.production === true ? 'source-map' : 'eval-cheap-source-map',
-  mode    : env.production === true ? 'production' : 'development',
-  
-  entry: {
-    'main': './main.ts',
-  },
+const IS_DEV_SERVER = !!process.env.WEBPACK_DEV_SERVER
 
-  output: {
-    path       : path.resolve(process.cwd(), 'dist'),
-    publicPath : '/dist/',
-  },
+module.exports = (env) => {
+  const IS_DEV_MDOE   = env.development === true || IS_DEV_SERVER
+  const IS_PROD_MDOE  = env.production === true
 
-  resolve: {
-    extensions: ['.ts', '.js', '.vue', '.json'],
+  return {
+    context : path.resolve(process.cwd(), 'src'),
+    devtool : IS_PROD_MDOE ? false : 'eval-cheap-source-map',
+    mode    : IS_PROD_MDOE ? 'production' : 'development',
     
-    alias: {
-      'vue': '@vue/runtime-dom',
+    entry: {
+      'main': ['./main.css', './main.ts'],
+    },
+
+    output: {
+      path       : path.resolve(process.cwd(), 'dist'),
+      publicPath : IS_DEV_SERVER ? '/' : './',
+    },
+
+    resolve: {
+      extensions: ['.ts', '.js', '.vue', '.json'],
+      
+      alias: {
+        'vue': '@vue/runtime-dom',
+      },
+
+      plugins: [
+        new TsconfigPathsPlugin(),
+      ],
+    },
+
+    module: {
+      rules: [
+        {
+          test : /\.ts$/,
+          
+          use: [
+            'babel-loader',
+            {
+              loader: 'ts-loader',
+
+              options: {
+                appendTsSuffixTo: [/\.vue$/],
+              },
+            },
+          ],
+        },
+        {
+          test : /\.vue$/,
+          use  : 'vue-loader',
+        },
+        {
+          test: /\.png$/,
+
+          use: {
+            loader: 'url-loader',
+
+            options: {
+              limit : 8192,
+            },
+          },
+        },
+        {
+          test: /\.css$/,
+
+          use: [
+            {
+              loader: MiniCssExtractPlugin.loader,
+              
+              options: {
+                // esModule  : true,
+                hmr       : IS_DEV_MDOE,
+                reloadAll : true,
+              },
+            },
+            {
+              loader: 'css-loader',
+              
+              options: {
+                // esModule      : true,
+                importLoaders : 2,
+              },
+            },
+            {
+              loader: 'postcss-loader',
+          
+              options: {
+                ident     : 'postcss',
+                sourceMap : IS_DEV_MDOE,
+
+                config: {
+                  path: process.cwd(),
+
+                  ctx: {
+                    production: IS_PROD_MDOE,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
     },
 
     plugins: [
-      new TsconfigPathsPlugin(),
-    ],
-  },
+      new CleanWebpackPlugin(),
 
-  module: {
-    rules: [
-      {
-        test : /\.ts$/,
-        
-        use: [
-          'babel-loader',
-          {
-            loader: 'ts-loader',
+      new HtmlWebpackPlugin({
+        inject   : 'body',
+        template : 'index.html',
+        title    : 'Vue 3 Playground',
+      }),
 
-            options: {
-              appendTsSuffixTo: [/\.vue$/],
-            },
-          },
-        ],
-      },
-      {
-        test : /\.vue$/,
-        use  : 'vue-loader',
-      },
-      {
-        test: /\.png$/,
+      new MiniCssExtractPlugin({
+        filename: IS_PROD_MDOE ? '[name].[hash].css' : '[name].css',
+      }),
 
-        use: {
-          loader: 'url-loader',
+      new VueLoaderPlugin(),
 
-          options: {
-            limit : 8192,
-          },
+      new DefinePlugin({
+        'process.env': {
+          NODE_ENV: JSON.stringify(IS_PROD_MDOE ? 'production' : 'development'),
         },
-      },
-      {
-        test: /\.css$/,
 
-        use: [
-          {
-            loader: MiniCssExtractPlugin.loader,
-            
-            options: {
-              hmr : env.production === false,
-            },
-          },
-          'css-loader',
-        ],
-      },
+        __VUE_OPTIONS_API__   : JSON.stringify(true),
+        __VUE_PROD_DEVTOOLS__ : JSON.stringify(env.production === false),
+      }),
     ],
-  },
 
-  plugins: [
-    new VueLoaderPlugin(),
-
-    new MiniCssExtractPlugin({
-      filename: '[name].css',
-    }),
-
-    new DefinePlugin({
-      'process.env': {
-        NODE_ENV: JSON.stringify(env.production === true ? 'production' : 'development'),
-      },
-
-      __VUE_OPTIONS_API__   : JSON.stringify(true),
-      __VUE_PROD_DEVTOOLS__ : JSON.stringify(env.production === false),
-    }),
-  ],
-
-  devServer: {
-    contentBase : path.resolve(process.cwd()),
-    hot         : true,
-    inline      : true,
-    overlay     : true,
-    stats       : 'minimal',
-  },
-})
+    devServer: {
+      contentBase : path.resolve(__dirname, 'dist'),
+      hot         : true,
+    },
+  }
+}
